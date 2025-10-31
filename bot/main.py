@@ -10,6 +10,8 @@ from bot.handlers.project_handler import (
     create_project_link,
     browse_projects,
     delete_project_command,
+    project_navigation,
+    bid_on_project,
     PROJECT_TITLE,
     PROJECT_LINK
 )
@@ -39,7 +41,10 @@ def main():
         fallbacks=[],
     )
     app.add_handler(post_conv)
-    app.add_handler(CallbackQueryHandler(browse_projects, pattern="browse_projects"))
+    
+    app.add_handler(CallbackQueryHandler(browse_projects, pattern="^browse_projects$"))
+    app.add_handler(CallbackQueryHandler(project_navigation, pattern="^proj_nav_"))
+    app.add_handler(CallbackQueryHandler(bid_on_project, pattern="^bid_"))
 
     print("🤖 Bot is running...")
 

@@ -6,8 +6,8 @@ from bot.keyboards.main_menu import main_menu_keyboard
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    
-    add_user(id = user.id, 
+
+    add_user(user_id = user.id, 
              username = user.username or "unknown")
     
     await update.message.reply_text(

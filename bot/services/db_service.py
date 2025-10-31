@@ -8,13 +8,13 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
-    CREATE TABLE IF NOT EXISTS projects (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT,
-        link TEXT,
-        posted_by INTEGER,
-        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
+        CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            link TEXT,
+            title TEXT,
+            posted_by INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
     """)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -42,14 +42,16 @@ def add_project(title: str, link: str, posted_by: int):
                    (title, link, posted_by))
     conn.commit()
     conn.close()
-
-def get_projects():
+    
+def get_all_projects():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, title, link, date FROM projects ORDER BY id DESC LIMIT 10")
-    rows = cursor.fetchall()
+    cursor.execute("""
+        SELECT id, title, link, created_at FROM projects ORDER BY created_at DESC
+    """)
+    projects = cursor.fetchall()
     conn.close()
-    return rows
+    return projects
 
 def delete_project(project_id: int):
     conn = sqlite3.connect(DB_PATH)
