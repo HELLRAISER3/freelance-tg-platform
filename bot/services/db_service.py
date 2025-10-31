@@ -7,45 +7,46 @@ DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute('''
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS projects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        link TEXT,
+        posted_by INTEGER,
+        date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY,
             username TEXT NOT NULL,
-            balance REAL DEFAULT 0
-        
-        )
-    ''')
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS projects (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            description TEXT,
-            posted_by INTEGER
+            role TEXT DEFAULT 'unkwown',
+            balance REAL DEFAULT 0.0
         )
     """)
     conn.commit()
     conn.close()
 
-def add_user(user_id: int, username: str, role: str = "freelancer"):
+def add_user(user_id: int, username: str, role: str = "unknown", balance: float = 0.0):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("INSERT OR IGNORE INTO users (id, username, role) VALUES (?, ?, ?)", 
-                   (user_id, username, role))
+    cursor.execute("INSERT OR IGNORE INTO users (id, username, role, balance) VALUES (?, ?, ?, ?)", 
+                   (user_id, username, role, balance))
     conn.commit()
     conn.close()
     
-def add_project(title: str, description: str, posted_by: int):
+def add_project(title: str, link: str, posted_by: int):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO projects (title, description, posted_by) VALUES (?, ?, ?)", 
-                   (title, description, posted_by))
+    cursor.execute("INSERT INTO projects (title, link, posted_by) VALUES (?, ?, ?)",
+                   (title, link, posted_by))
     conn.commit()
     conn.close()
 
 def get_projects():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, title, description FROM projects ORDER BY id DESC LIMIT 10")
+    cursor.execute("SELECT id, title, link, date FROM projects ORDER BY id DESC LIMIT 10")
     rows = cursor.fetchall()
     conn.close()
     return rows

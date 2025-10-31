@@ -5,16 +5,22 @@ from telegram.ext import (
 )
 from bot.handlers.start_handler import start
 from bot.handlers.project_handler import (
-    post_project_start,
-    post_project_title,
-    post_project_description,
+    create_project_start,
+    create_project_title,
+    create_project_link,
     browse_projects,
     delete_project_command,
-    POST_TITLE,
-    POST_DESC
+    PROJECT_TITLE,
+    PROJECT_LINK
 )
 from bot.services.db_service import init_db
 from bot.config import BOT_TOKEN
+
+def run_bot_in_thread(application):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(application.run_polling()) # Await the coroutine
+    loop.close()
 
 def main():
     init_db()
@@ -25,10 +31,10 @@ def main():
     app.add_handler(CommandHandler("delete", delete_project_command))
 
     post_conv = ConversationHandler(
-        entry_points=[CallbackQueryHandler(post_project_start, pattern="post_project")],
+        entry_points=[CallbackQueryHandler(create_project_start, pattern="create_project")],
         states={
-            POST_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, post_project_title)],
-            POST_DESC: [MessageHandler(filters.TEXT & ~filters.COMMAND, post_project_description)],
+            PROJECT_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, create_project_title)],
+            PROJECT_LINK: [MessageHandler(filters.TEXT & ~filters.COMMAND, create_project_link)],
         },
         fallbacks=[],
     )
@@ -36,7 +42,10 @@ def main():
     app.add_handler(CallbackQueryHandler(browse_projects, pattern="browse_projects"))
 
     print("🤖 Bot is running...")
-    app.run_polling()
+
+    run_bot_in_thread(app)
 
 if __name__ == "__main__": 
     main()
+
+
