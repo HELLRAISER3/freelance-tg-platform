@@ -1,0 +1,7 @@
+python-telegram-bot==21.4
+python-dotenv
+requests
+SQLAlchemy
+pandas
+aiohttp
+numpy
