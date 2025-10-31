@@ -10,7 +10,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     add_user(user_id = user.id, 
              username = user.username or "unknown")
     
-    await update.message.reply_text(
+    await update.effective_message.reply_text(
         f"👋 Hello, {user.first_name}! Welcome to Freelance Bot.\nChoose an option:",
         reply_markup=main_menu_keyboard()
     )

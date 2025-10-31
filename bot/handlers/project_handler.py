@@ -43,10 +43,9 @@ async def create_project_link(update: Update, context: ContextTypes.DEFAULT_TYPE
 
     project_id = add_project(title, link, update.effective_user.id)
 
-    # Inline buttons
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🔗 Open Project", url=link)],
-        [InlineKeyboardButton("💰 Bid", callback_data=f"bid_{project_id}")],
+        [InlineKeyboardButton("Back", callback_data=f"back_to_main_menu")],
     ])
 
     await update.message.reply_text(
@@ -59,68 +58,93 @@ async def create_project_link(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
     return ConversationHandler.END
 
-
-# --- Browse projects ---
-
 async def browse_projects(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Entry point for browsing — always starts at page 0"""
     projects = get_all_projects()
     if not projects:
         await update.callback_query.message.reply_text("No projects yet 💤")
         return
 
-    # Store list in context for navigation
     context.user_data["projects"] = projects
-    context.user_data["page"] = 0
-
-    await show_project_page(update, context, 0)
+    await send_project_list(update, context, 0)
 
 
-async def show_project_page(update: Update, context: ContextTypes.DEFAULT_TYPE, page: int):
+async def send_project_list(update: Update, context: ContextTypes.DEFAULT_TYPE, page: int):
+    """Displays a list of projects as inline buttons"""
     projects = context.user_data.get("projects", [])
-    if not projects:
-        await update.callback_query.message.reply_text("No projects found 💤")
-        return
+    total_pages = (len(projects) - 1) // PROJECTS_PER_PAGE + 1
+    start = page * PROJECTS_PER_PAGE
+    end = start + PROJECTS_PER_PAGE
+    subset = projects[start:end]
 
-    project = projects[page]
-    pid, title, link, created_at = project
+    keyboard = []
+    for pid, title, link, date in subset:
+        keyboard.append([InlineKeyboardButton(title, callback_data=f"project_view_{pid}")])
 
-    # --- Message text ---
-    text = (
-        f"📄 *{title}*\n"
-        f"🔗 [View details on Telegraph]({link})\n"
-        f"📅 Created: `{created_at}`"
-    )
 
-    # --- Inline buttons ---
-    buttons = []
     nav_buttons = []
     if page > 0:
-        nav_buttons.append(InlineKeyboardButton("⬅ Back", callback_data=f"proj_nav_{page-1}"))
-    if page < len(projects) - 1:
-        nav_buttons.append(InlineKeyboardButton("➡ Next", callback_data=f"proj_nav_{page+1}"))
-
-    buttons.append([InlineKeyboardButton("💸 Bid", callback_data=f"bid_{pid}")])
+        nav_buttons.append(InlineKeyboardButton("⬅ Prev", callback_data=f"page_{page-1}"))
+    if page < total_pages - 1:
+        nav_buttons.append(InlineKeyboardButton("Next ➡", callback_data=f"page_{page+1}"))
     if nav_buttons:
-        buttons.append(nav_buttons)
+        keyboard.append(nav_buttons)
+        
+    keyboard.append([InlineKeyboardButton("Back", callback_data=f"back_to_main_menu")])
 
-    reply_markup = InlineKeyboardMarkup(buttons)
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    text = "📢 *Recent Projects:*"
 
-    # --- Edit or send message ---
     if update.callback_query:
         await update.callback_query.edit_message_text(
-            text=text, parse_mode="Markdown", reply_markup=reply_markup, disable_web_page_preview=True
+            text=text, parse_mode="Markdown", reply_markup=reply_markup
         )
     else:
-        await update.message.reply_text(
-            text=text, parse_mode="Markdown", reply_markup=reply_markup, disable_web_page_preview=True
-        )
+        await update.message.reply_text(text, parse_mode="Markdown", reply_markup=reply_markup)
 
-async def project_navigation(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def navigate_page(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    page = int(query.data.split("_")[2])
-    await show_project_page(update, context, page)
+    page = int(query.data.split("_")[1])
+    await send_project_list(update, context, page)
 
+
+async def show_project_detail(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    pid = int(query.data.split("_")[2])
+
+    projects = context.user_data.get("projects", [])
+
+    project = next((p for p in projects if p[0] == pid), None)
+
+    if not project:
+        await query.message.reply_text("Project not found ❌")
+        return
+
+    pid, title, link, date = project
+    text = (
+        f"🧩 *{title}*\n\n"
+        f"🔗 [View on Telegraph]({link})\n"
+        f"📅 Created: `{date}`"
+    )
+
+    keyboard = [
+        [InlineKeyboardButton("💸 Bid", callback_data=f"bid_{pid}")],
+        [InlineKeyboardButton("⬅ Back to list", callback_data="back_to_list")]
+    ]
+
+    await query.edit_message_text(
+        text=text,
+        parse_mode="Markdown",
+        disable_web_page_preview=True,
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+async def back_to_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.callback_query.answer()
+    await send_project_list(update, context, 0)
 
 async def bid_on_project(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
